@@ -1,0 +1,92 @@
+# Get free RPMfusion repository 
+sudo dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
+
+# Get the nonfree repository (NVIDIA drivers, some codecs)
+sudo dnf install -y https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+
+# Remove the limited Fedora repo to prevent conflicts
+flatpak remote-delete fedora
+
+# add flathub to user-home
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+# Install AppStream metadata
+sudo dnf install -y rpmfusion-free-appstream-data rpmfusion-nonfree-appstream-data
+
+sudo dnf check-update
+sudo dnf group upgrade core
+sudo dnf update
+sudo reboot
+
+
+# ---- firmware updates
+
+# See what can be updated
+sudo fwupdmgr get-devices
+
+# Refresh the firmware database
+sudo fwupdmgr refresh --force
+
+# Check for updates
+sudo fwupdmgr get-updates
+
+# Apply them
+sudo fwupdmgr update
+
+sudo reboot
+
+
+# ---- compatability
+
+# For Appimage support install fuse
+sudo dnf in fuse-libs
+# AppImage manager
+flatpak install it.mijorus.gearlever -y
+
+sudo dnf install alien rpm-build
+sudo dnf install -y p7zip p7zip-plugins unrar
+
+
+# ---- Video Drivers
+
+# Install these to get proper multimedia playback.
+sudo dnf4 group install multimedia
+sudo dnf swap 'ffmpeg-free' 'ffmpeg' --allowerasing # Switch to full FFMPEG.
+sudo dnf update @multimedia --setopt="install_weak_deps=False" --exclude=PackageKit-gstreamer-plugin # Installs gstreamer components. Required if you use Gnome Videos and other dependent applications.
+sudo dnf group install -y sound-and-video # Installs useful Sound and Video complementary packages.
+
+# HW Video Decoding 
+sudo dnf install ffmpeg-libs libva libva-utils --allowerasing -y
+sudo dnf swap libva-intel-media-driver intel-media-driver --allowerasing -y
+sudo dnf install libva-intel-driver
+
+# Vulkan and basic acceleration
+sudo dnf install mesa-vulkan-drivers vulkan-loader mesa-libGLU libva-utils
+
+# Intel video acceleration (for newer Intel GPUs)
+sudo dnf install -y intel-media-driver
+
+
+# ---- Firefox Video fix
+sudo dnf install -y openh264 gstreamer1-plugin-openh264 mozilla-openh264
+
+sudo dnf config-manager --set-enabled fedora-cisco-openh264
+sudo dnf update
+
+
+# ---- Backup
+
+# take snapshots with btrfs assistant (System only)
+sudo dnf install -y btrfs-assistant btrbk snapper
+# Enable automatic snapshots
+sudo systemctl enable --now snapper-timeline.timer
+sudo systemctl enable --now snapper-cleanup.timer
+
+# Personal Files
+sudo dnf install -y deja-dup
+
+# ---- clean up
+# Clean package cache and remove orphaned packages
+sudo dnf clean all
+sudo dnf autoremove -y
